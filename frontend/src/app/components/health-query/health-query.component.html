@@ -1,0 +1,16 @@
+<h2>HealthDesk - Submit Query</h2>
+
+<input [(ngModel)]="name" placeholder="Name" />
+<br /><br />
+
+<textarea [(ngModel)]="symptoms" placeholder="Describe symptoms"></textarea>
+<br /><br />
+
+<select [(ngModel)]="severity">
+  <option>Low</option>
+  <option>Medium</option>
+  <option>High</option>
+</select>
+<br /><br />
+
+<button (click)="submit()">Submit</button>
