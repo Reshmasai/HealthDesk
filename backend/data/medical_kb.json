@@ -1,0 +1,18 @@
+[
+  {
+    "keywords": ["fever", "temperature"],
+    "content": "Fever is often caused by infections. Stay hydrated and monitor temperature regularly."
+  },
+  {
+    "keywords": ["cough"],
+    "content": "Cough may be due to cold or irritation. Warm fluids can help soothe the throat."
+  },
+  {
+    "keywords": ["headache"],
+    "content": "Headaches can be caused by stress, dehydration, or lack of sleep."
+  },
+  {
+    "keywords": ["stomach", "pain"],
+    "content": "Stomach pain may be due to indigestion or infection. Eat light meals and stay hydrated."
+  }
+]

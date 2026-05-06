@@ -1,16 +1,71 @@
-<h2>HealthDesk - Submit Query</h2>
+<div class="chat-wrapper">
 
-<input [(ngModel)]="name" placeholder="Name" />
-<br /><br />
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="header-icon">🏥</div>
+    <div class="header-text">
+      <div class="title">HealthDesk Assistant</div>
+      <div class="subtitle">AI-powered health guidance</div>
+    </div>
+    <div class="status">Online</div>
+  </div>
 
-<textarea [(ngModel)]="symptoms" placeholder="Describe symptoms"></textarea>
-<br /><br />
+  <!-- Name bar -->
+  <div class="name-bar">
+    <label>Your name</label>
+    <input [(ngModel)]="name" placeholder="Enter your name..." />
+  </div>
 
-<select [(ngModel)]="severity">
-  <option>Low</option>
-  <option>Medium</option>
-  <option>High</option>
-</select>
-<br /><br />
+  <!-- Messages -->
+  <div class="chat-container" #chatContainer>
 
-<button (click)="submit()">Submit</button>
+    <div *ngFor="let msg of messages"
+         class="msg-row"
+         [ngClass]="msg.role">
+
+      <!-- Avatar -->
+      <div class="avatar"
+           [ngClass]="msg.role === 'user' ? 'user-avatar' : 'ai-avatar'">
+        {{ msg.role === 'user' ? (name ? name.slice(0,2).toUpperCase() : 'U') : 'HD' }}
+      </div>
+
+      <!-- Bubble -->
+      <div class="bubble">
+        {{ msg.text }}
+        <div *ngIf="msg.role === 'user' && msg.severity"
+             class="severity-badge"
+             [ngClass]="msg.severity!.toLowerCase()">
+          {{ msg.severity }} severity
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Typing indicator -->
+    <div *ngIf="loading" class="msg-row ai">
+      <div class="avatar ai-avatar">HD</div>
+      <div class="typing-bubble">
+        <span class="dot-one"></span>
+        <span class="dot-two"></span>
+        <span class="dot-three"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Input bar -->
+  <div class="input-bar">
+    <input
+      [(ngModel)]="symptoms"
+      placeholder="Describe your symptoms..."
+      (keyup.enter)="send()"
+    />
+    <select [(ngModel)]="severity">
+      <option>Low</option>
+      <option>Medium</option>
+      <option>High</option>
+    </select>
+    <button (click)="send()" [disabled]="loading">Send</button>
+  </div>
+
+</div>
