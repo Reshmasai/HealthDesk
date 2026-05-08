@@ -39,10 +39,7 @@ def root():
 
 @app.get("/history")
 def get_history(db: Session = Depends(get_db)):
-    """
-    Fetch all messages from SQLite, ordered oldest first.
-    Depends(get_db) automatically injects a DB session here.
-    """
+    """Fetch all messages from SQLite ordered oldest first."""
     messages = db.query(Message).order_by(Message.timestamp).all()
     return {
         "items": [
@@ -62,11 +59,28 @@ def get_history(db: Session = Depends(get_db)):
 @app.post("/query")
 def handle_query(query: HealthQuery, db: Session = Depends(get_db)):
     """
-    Save user message, call AI, save AI response, return to Angular.
-    db session is injected automatically via Depends(get_db).
+    1. Fetch existing chat history from SQLite
+    2. Save user message
+    3. Pass history + new message to AI
+    4. Save AI response
+    5. Return to Angular
     """
 
-    # Save user message to SQLite
+    # 1. Fetch existing conversation history for this user from SQLite
+    previous_messages = (
+        db.query(Message)
+        .filter(Message.name == query.name)   # only this user's messages
+        .order_by(Message.timestamp)
+        .all()
+    )
+
+    # Convert to simple dicts for ai_service
+    history = [
+        {"role": m.role, "text": m.text}
+        for m in previous_messages
+    ]
+
+    # 2. Save user message to SQLite
     user_msg = Message(
         name=query.name,
         role="user",
@@ -77,14 +91,15 @@ def handle_query(query: HealthQuery, db: Session = Depends(get_db)):
     db.add(user_msg)
     db.commit()
 
-    # Get AI response
+    # 3. Call AI with full history for multi-turn memory
     ai_response = get_health_guidance(
-        query.name,
-        query.symptoms,
-        query.severity
+        name=query.name,
+        symptoms=query.symptoms,
+        severity=query.severity,
+        history=history          # ← passing conversation history
     )
 
-    # Save AI message to SQLite
+    # 4. Save AI response to SQLite
     ai_msg = Message(
         name=query.name,
         role="ai",
@@ -99,7 +114,7 @@ def handle_query(query: HealthQuery, db: Session = Depends(get_db)):
 
 @app.delete("/history")
 def clear_history(db: Session = Depends(get_db)):
-    """Bonus: clear all chat history — useful for testing."""
+    """Clear all chat history — useful for testing."""
     db.query(Message).delete()
     db.commit()
     return {"message": "History cleared"}

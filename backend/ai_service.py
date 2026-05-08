@@ -1,16 +1,18 @@
+# ai_service.py
 import json
 import os
 from groq import Groq
 
-# load knowledge base
+# Load knowledge base
 with open("data/medical_kb.json") as f:
     knowledge_base = json.load(f)
 
-# init Groq client
+# Init Groq client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
 def retrieve_context(symptoms: str) -> str:
+    """Match symptoms against local medical KB keywords."""
     s = symptoms.lower()
     matched = []
 
@@ -20,20 +22,16 @@ def retrieve_context(symptoms: str) -> str:
                 matched.append(f"- {item['content']}")
                 break
 
-    if matched:
-        return "\n".join(matched)
-    return "No specific entries found in local knowledge base for these symptoms."
+    return "\n".join(matched) if matched else "No specific entries found in local knowledge base."
 
 
-def get_health_guidance(name: str, symptoms: str, severity: str) -> str:
-
-    context = retrieve_context(symptoms)
-
+def build_system_prompt(context: str, severity: str) -> str:
+    """Build the system prompt with KB context and severity."""
     urgency_note = ""
     if severity.lower() == "high":
-        urgency_note = "The user has marked their severity as HIGH. Emphasize seeking immediate medical attention."
+        urgency_note = "The user has marked their severity as HIGH. Strongly emphasize seeking immediate medical attention."
 
-    system_prompt = f"""You are HealthDesk, a helpful and empathetic AI health assistant.
+    return f"""You are HealthDesk, a helpful and empathetic AI health assistant.
 Your job is to provide general health guidance based on symptoms described by the user.
 You are NOT a doctor and must always remind users this is not medical advice.
 
@@ -42,21 +40,42 @@ You have access to a local medical knowledge base. Use it to inform your respons
 
 Guidelines:
 - Be warm, clear, and concise
+- Remember and refer back to what the user mentioned earlier in the conversation
 - Give 2-3 practical suggestions
 - Always end with a disclaimer
 - If severity is high, strongly recommend seeing a doctor
-{urgency_note}
-"""
+{urgency_note}"""
 
-    user_message = f"My name is {name}. I'm experiencing: {symptoms}. Severity level: {severity}."
+
+def get_health_guidance(name: str, symptoms: str, severity: str, history: list[dict] = []) -> str:
+    """
+    Call Groq with full conversation history for multi-turn memory.
+
+    history: list of previous messages in format:
+             [{"role": "user", "text": "..."}, {"role": "ai", "text": "..."}, ...]
+    """
+
+    context = retrieve_context(symptoms)
+    system_prompt = build_system_prompt(context, severity)
+
+    # Build messages array for Groq — start with system prompt
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Append previous conversation history (last 10 messages to keep token count low)
+    for msg in history[-10:]:
+        role = "user" if msg["role"] == "user" else "assistant"  # Groq uses "assistant" not "ai"
+        messages.append({"role": role, "content": msg["text"]})
+
+    # Add current user message
+    messages.append({
+        "role": "user",
+        "content": f"My name is {name}. I'm experiencing: {symptoms}. Severity level: {severity}."
+    })
 
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
+            messages=messages,
             max_tokens=400,
             temperature=0.6
         )
